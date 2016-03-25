@@ -5,23 +5,20 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
-import android.view.Menu;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+import com.example.martinbegleiter.githubrestlibrary.GithubFactory;
+import com.example.martinbegleiter.githubrestlibrary.model.Repo;
+import com.example.martinbegleiter.githubrestlibrary.api.GithubListener;
+import com.example.martinbegleiter.githubrestlibrary.api.Github;
+
 import java.util.List;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+public class MainActivity extends AppCompatActivity implements GithubListener {
 
-
-public class MainActivity extends AppCompatActivity implements Callback<List<Repo>> {
-
-    private GitHubService mGitHubService;
     private ListView mListView;
+    private Github mGitHubRest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +26,7 @@ public class MainActivity extends AppCompatActivity implements Callback<List<Rep
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        mGitHubRest = GithubFactory.getGitHub();
 
         mListView = (ListView)findViewById(R.id.repo_list);
         ArrayAdapter<Repo> adapter = new ArrayAdapter<Repo>(getApplicationContext(),
@@ -39,27 +37,10 @@ public class MainActivity extends AppCompatActivity implements Callback<List<Rep
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Call<List<Repo>> repos = mGitHubService.listRepos("octocat");
-                repos.enqueue(MainActivity.this);
+                mGitHubRest.getRepos(MainActivity.this);
+
             }
         });
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("https://api.github.com/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        mGitHubService = retrofit.create(GitHubService.class);
-    }
-
-    @Override
-    public void onResponse(Call<List<Repo>> call, Response<List<Repo>> response) {
-        setItemsInList(response.body());
-    }
-
-    @Override
-    public void onFailure(Call<List<Repo>> call, Throwable t) {
-        clearList();
     }
 
     private void clearList() {
@@ -72,5 +53,15 @@ public class MainActivity extends AppCompatActivity implements Callback<List<Rep
         repoAdapter.clear();
         repoAdapter.addAll(items);
         repoAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onReposLoaded(List<Repo> reposLoaded) {
+        setItemsInList(reposLoaded);
+    }
+
+    @Override
+    public void onRepoLoadFailure() {
+        clearList();
     }
 }

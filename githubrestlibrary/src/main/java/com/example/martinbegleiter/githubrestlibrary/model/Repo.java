@@ -1,4 +1,4 @@
-package com.example.martinbegleiter.testretrofit;
+package com.example.martinbegleiter.githubrestlibrary.model;
 
 /**
  * Created by martinbegleiter on 22/03/16.
