@@ -4,21 +4,24 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
-import com.example.martinbegleiter.githubrestlibrary.GithubFactory;
+import com.example.martinbegleiter.githubrestlibrary.RestManager;
+import com.example.martinbegleiter.githubrestlibrary.events.ReposEventRequest;
+import com.example.martinbegleiter.githubrestlibrary.events.ReposEventResponse;
 import com.example.martinbegleiter.githubrestlibrary.model.Repo;
-import com.example.martinbegleiter.githubrestlibrary.api.GithubListener;
-import com.example.martinbegleiter.githubrestlibrary.api.Github;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements GithubListener {
+public class MainActivity extends AppCompatActivity {
 
     private ListView mListView;
-    private Github mGitHubRest;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,7 +29,7 @@ public class MainActivity extends AppCompatActivity implements GithubListener {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        mGitHubRest = GithubFactory.getGitHub();
+        RestManager.start();
 
         mListView = (ListView)findViewById(R.id.repo_list);
         ArrayAdapter<Repo> adapter = new ArrayAdapter<Repo>(getApplicationContext(),
@@ -37,10 +40,11 @@ public class MainActivity extends AppCompatActivity implements GithubListener {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mGitHubRest.getRepos(MainActivity.this);
+                EventBus.getDefault().post(new ReposEventRequest());
 
             }
         });
+        EventBus.getDefault().register(this);
     }
 
     private void clearList() {
@@ -56,12 +60,18 @@ public class MainActivity extends AppCompatActivity implements GithubListener {
     }
 
     @Override
-    public void onReposLoaded(List<Repo> reposLoaded) {
-        setItemsInList(reposLoaded);
+    protected void onDestroy() {
+        super.onDestroy();
+        RestManager.stop();
     }
 
-    @Override
-    public void onRepoLoadFailure() {
-        clearList();
+    @Subscribe
+    public void onReposReceived(ReposEventResponse reposEventResponse) {
+        Throwable throwable = reposEventResponse.mThrowable;
+        if (throwable != null) {
+            Log.e("MARTIN", "Error when retrieving repos");
+        } else {
+            setItemsInList(reposEventResponse.mRepoList);
+        }
     }
 }
